@@ -1,6 +1,17 @@
 :root {
-  --ui-font: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
+  /* Compact token system — instrument readout aesthetic. */
+  --ink: #e9edf2; /* primary text */
+  --ink-dim: #99a2b2; /* labels, secondary — lifted for contrast over bright field */
+  --ink-faint: #454c59; /* rules, inactive */
+  /* Higher opacity so small mono labels keep >=4.5:1 even over bright
+     field regions (e.g. Aurora green) where the canvas luminance spikes. */
+  --surface: rgba(9, 12, 19, 0.66);
+  --edge: rgba(233, 237, 242, 0.14);
+  --edge-lit: rgba(233, 237, 242, 0.75);
+  --signal: #37e0a8; /* the one accent — a readout "live" green */
+
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 * {
@@ -25,177 +36,279 @@ body {
   background: #05060a;
 }
 
-/* Glassmorphic control panel, pinned top-left, floating above the canvas. */
-.controls {
+/* ── HUD: a bracketed instrument cluster pinned to the corner ───────────── */
+.hud {
   position: fixed;
-  top: 20px;
-  left: 20px;
+  top: 28px;
+  left: 28px;
   z-index: 10;
+  width: 244px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  width: 260px;
-  padding: 20px 22px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(14, 16, 24, 0.55);
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  box-shadow:
-    0 10px 40px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.82);
-  font-family: var(--ui-font);
+  gap: 22px;
+  padding: 22px 22px 18px;
+  color: var(--ink);
+  font-family: var(--sans);
+  background: var(--surface);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
   -webkit-font-smoothing: antialiased;
+  /* No solid box — the frame is drawn as bracket corners via the ::before/
+     ::after tick marks below, plus a single hairline outline. */
+  border: 1px solid var(--edge);
+  border-radius: 2px;
 }
 
-.title {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 300;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.95);
+/* Top-left + bottom-right corner brackets — the signature framing device. */
+.hud::before,
+.hud::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--edge-lit);
+  border-style: solid;
+}
+.hud::before {
+  top: -1px;
+  left: -1px;
+  border-width: 1px 0 0 1px;
+}
+.hud::after {
+  bottom: -1px;
+  right: -1px;
+  border-width: 0 1px 1px 0;
 }
 
-.control-group {
+.hud-head {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
 }
 
-.control-label {
+.hud-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  padding-left: 0.42em; /* optical: compensate for tracking */
+}
+
+.hud-sub {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
+}
+
+/* ── Blocks and labels ──────────────────────────────────────────────────── */
+.hud-block {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.hud-label {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ink-dim);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--edge);
 }
 
-.control-value {
+.hud-readout {
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.1em;
+  color: var(--ink);
 }
 
-/* Palette pills */
-.palette-row {
+/* ── Palette swatches: color IS the control (signature element) ─────────── */
+.swatch-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  gap: 7px;
 }
 
-.palette-button {
-  padding: 6px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.7);
-  font-family: inherit;
-  font-size: 12px;
-  letter-spacing: 0.02em;
+.swatch {
+  flex: 1;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  background-size: 140% 140%;
+  background-position: center;
   cursor: pointer;
+  position: relative;
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.1s ease;
+    transform 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease;
 }
 
-.palette-button:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.28);
-  color: rgba(255, 255, 255, 0.95);
+.swatch:hover {
+  transform: translateY(-2px);
+  border-color: var(--edge-lit);
 }
 
-.palette-button:active {
-  transform: translateY(1px);
+.swatch.active {
+  border-color: var(--ink);
+  box-shadow:
+    0 0 0 1px var(--ink),
+    0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
-.palette-button.active {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.65);
-  color: #ffffff;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.12);
+/* Selected swatch grows a small tick beneath it — an instrument indicator. */
+.swatch.active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 4px;
+  height: 4px;
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--ink);
 }
 
-/* Range slider */
+/* ── Range slider — thin track, precise thumb ───────────────────────────── */
 .slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  height: 2px;
+  border-radius: 0;
+  background: var(--ink-faint);
   outline: none;
-  cursor: pointer;
+  cursor: ew-resize;
 }
 
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
+  width: 3px;
   height: 16px;
-  border-radius: 50%;
-  background: #ffffff;
+  border-radius: 1px;
+  background: var(--ink);
   border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  transition: transform 0.1s ease;
+  transition: transform 0.12s ease;
 }
-
 .slider::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
+  transform: scaleY(1.25);
 }
 
 .slider::-moz-range-thumb {
-  width: 16px;
+  width: 3px;
   height: 16px;
-  border-radius: 50%;
-  background: #ffffff;
+  border-radius: 1px;
+  background: var(--ink);
   border: none;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
-  transition: transform 0.1s ease;
 }
 
-.slider::-moz-range-thumb:hover {
-  transform: scale(1.15);
+.slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(55, 224, 168, 0.4);
 }
 
-/* Action buttons */
-.button-row {
+/* ── Action buttons — flat monospace tabs ───────────────────────────────── */
+.hud-actions {
   display: flex;
-  gap: 8px;
+  gap: 7px;
 }
 
-.action-button {
+.hud-btn {
   flex: 1;
-  padding: 9px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.85);
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  padding: 9px 8px;
+  border: 1px solid var(--edge);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
   cursor: pointer;
   transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.1s ease;
+    color 0.14s ease,
+    border-color 0.14s ease,
+    background 0.14s ease;
 }
 
-.action-button:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #ffffff;
+.hud-btn:hover {
+  color: var(--ink);
+  border-color: var(--edge-lit);
+  background: rgba(233, 237, 242, 0.05);
 }
 
-.action-button:active {
+.hud-btn:active {
   transform: translateY(1px);
+}
+
+/* ── Telemetry footer — the "live" readout ──────────────────────────────── */
+.hud-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  color: var(--ink-dim);
+  padding-top: 12px;
+  border-top: 1px solid var(--edge);
+}
+
+.tele-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  transition: background 0.2s ease;
+}
+
+.tele-dot.live {
+  background: var(--signal);
+  box-shadow: 0 0 8px var(--signal);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ── Focus + accessibility floor ────────────────────────────────────────── */
+.swatch:focus-visible,
+.hud-btn:focus-visible,
+.slider:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swatch,
+  .hud-btn,
+  .slider::-webkit-slider-thumb,
+  .tele-dot {
+    transition: none;
+  }
+  .tele-dot.live {
+    animation: none;
+  }
+}
+
+/* Narrow screens: keep the instrument usable. */
+@media (max-width: 480px) {
+  .hud {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
 }

@@ -3,6 +3,12 @@ import { FlowField } from './FlowField.js'
 import { PALETTES } from './palettes.js'
 import './App.css'
 
+// Build a CSS linear-gradient string from a palette's color stops so each
+// selector shows the actual material it applies — color is the subject here.
+function gradientOf(colors) {
+  return `linear-gradient(120deg, ${colors.join(', ')})`
+}
+
 function App() {
   const canvasRef = useRef(null)
   const fieldRef = useRef(null)
@@ -10,6 +16,8 @@ function App() {
   const [paletteIndex, setPaletteIndex] = useState(0)
   const [count, setCount] = useState(1400)
   const [paused, setPaused] = useState(false)
+  // Live telemetry for the instrument readout — pointer position in the field.
+  const [pointer, setPointer] = useState({ x: 0, y: 0, active: false })
 
   // Create the engine once after mount, start the loop, and wire up resize.
   useEffect(() => {
@@ -54,14 +62,20 @@ function App() {
     const field = fieldRef.current
     if (!field) return
     const rect = event.currentTarget.getBoundingClientRect()
-    field.setPointer(event.clientX - rect.left, event.clientY - rect.top, true)
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    field.setPointer(x, y, true)
+    setPointer({ x, y, active: true })
   }
 
   const handlePointerLeave = (event) => {
     const field = fieldRef.current
     if (!field) return
     const rect = event.currentTarget.getBoundingClientRect()
-    field.setPointer(event.clientX - rect.left, event.clientY - rect.top, false)
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    field.setPointer(x, y, false)
+    setPointer({ x, y, active: false })
   }
 
   const handleClear = () => {
@@ -81,6 +95,8 @@ function App() {
     }
   }
 
+  const activePalette = PALETTES[paletteIndex]
+
   return (
     <>
       <canvas
@@ -90,31 +106,39 @@ function App() {
         onPointerLeave={handlePointerLeave}
       />
 
-      <div className="controls">
-        <h1 className="title">Flow Field</h1>
+      {/* Field-instrument HUD: bracketed corner cluster, not a floating card. */}
+      <aside className="hud" aria-label="Flow field controls">
+        <header className="hud-head">
+          <h1 className="hud-title">Flow Field</h1>
+          <p className="hud-sub">vector field · perlin noise · {activePalette.name.toLowerCase()}</p>
+        </header>
 
-        <div className="control-group">
-          <span className="control-label">Palette</span>
-          <div className="palette-row">
+        <section className="hud-block">
+          <div className="hud-label">
+            <span>Palette</span>
+          </div>
+          <div className="swatch-row" role="radiogroup" aria-label="Palette">
             {PALETTES.map((palette, index) => (
               <button
                 key={palette.name}
                 type="button"
-                className={
-                  'palette-button' + (index === paletteIndex ? ' active' : '')
-                }
+                role="radio"
+                aria-checked={index === paletteIndex}
+                aria-label={palette.name}
+                title={palette.name}
+                className={'swatch' + (index === paletteIndex ? ' active' : '')}
+                style={{ backgroundImage: gradientOf(palette.colors) }}
                 onClick={() => setPaletteIndex(index)}
-              >
-                {palette.name}
-              </button>
+              />
             ))}
           </div>
-        </div>
+        </section>
 
-        <div className="control-group">
-          <span className="control-label">
-            Particles<span className="control-value">{count}</span>
-          </span>
+        <section className="hud-block">
+          <div className="hud-label">
+            <span>Density</span>
+            <span className="hud-readout">{String(count).padStart(4, '0')}</span>
+          </div>
           <input
             className="slider"
             type="range"
@@ -122,23 +146,27 @@ function App() {
             max="3000"
             step="100"
             value={count}
+            aria-label="Particle count"
             onChange={(event) => setCount(Number(event.target.value))}
           />
+        </section>
+
+        <div className="hud-actions">
+          <button type="button" className="hud-btn" onClick={togglePlayback}>
+            {paused ? '▶ Play' : '❚❚ Pause'}
+          </button>
+          <button type="button" className="hud-btn" onClick={handleClear}>
+            ⟲ Clear
+          </button>
         </div>
 
-        <div className="button-row">
-          <button type="button" className="action-button" onClick={handleClear}>
-            Clear
-          </button>
-          <button
-            type="button"
-            className="action-button"
-            onClick={togglePlayback}
-          >
-            {paused ? 'Play' : 'Pause'}
-          </button>
-        </div>
-      </div>
+        {/* Live telemetry line — reinforces the instrument metaphor. */}
+        <footer className="hud-telemetry" aria-hidden="true">
+          <span className={'tele-dot' + (pointer.active ? ' live' : '')} />
+          x{String(Math.round(pointer.x)).padStart(4, '0')} · y
+          {String(Math.round(pointer.y)).padStart(4, '0')}
+        </footer>
+      </aside>
     </>
   )
 }
