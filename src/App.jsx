@@ -1,120 +1,144 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useRef, useState } from 'react'
+import { FlowField } from './FlowField.js'
+import { PALETTES } from './palettes.js'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const canvasRef = useRef(null)
+  const fieldRef = useRef(null)
+
+  const [paletteIndex, setPaletteIndex] = useState(0)
+  const [count, setCount] = useState(1400)
+  const [paused, setPaused] = useState(false)
+
+  // Create the engine once after mount, start the loop, and wire up resize.
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const field = new FlowField(canvas, {
+      particleCount: 1400,
+      palette: PALETTES[0],
+    })
+    fieldRef.current = field
+    field.start()
+
+    const handleResize = () => {
+      if (fieldRef.current) fieldRef.current.resize()
+    }
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      field.stop()
+      fieldRef.current = null
+    }
+  }, [])
+
+  // Swap palette live when the selection changes.
+  useEffect(() => {
+    const field = fieldRef.current
+    if (!field) return
+    field.setPalette(PALETTES[paletteIndex])
+  }, [paletteIndex])
+
+  // Update particle count live; setting the field then reseeding via resize().
+  useEffect(() => {
+    const field = fieldRef.current
+    if (!field) return
+    field.particleCount = count
+    field.resize()
+  }, [count])
+
+  const handlePointerMove = (event) => {
+    const field = fieldRef.current
+    if (!field) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    field.setPointer(event.clientX - rect.left, event.clientY - rect.top, true)
+  }
+
+  const handlePointerLeave = (event) => {
+    const field = fieldRef.current
+    if (!field) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    field.setPointer(event.clientX - rect.left, event.clientY - rect.top, false)
+  }
+
+  const handleClear = () => {
+    const field = fieldRef.current
+    if (field) field.clear()
+  }
+
+  const togglePlayback = () => {
+    const field = fieldRef.current
+    if (!field) return
+    if (paused) {
+      field.start()
+      setPaused(false)
+    } else {
+      field.stop()
+      setPaused(true)
+    }
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <canvas
+        ref={canvasRef}
+        className="field-canvas"
+        onPointerMove={handlePointerMove}
+        onPointerLeave={handlePointerLeave}
+      />
 
-      <div className="ticks"></div>
+      <div className="controls">
+        <h1 className="title">Flow Field</h1>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="control-group">
+          <span className="control-label">Palette</span>
+          <div className="palette-row">
+            {PALETTES.map((palette, index) => (
+              <button
+                key={palette.name}
+                type="button"
+                className={
+                  'palette-button' + (index === paletteIndex ? ' active' : '')
+                }
+                onClick={() => setPaletteIndex(index)}
+              >
+                {palette.name}
+              </button>
+            ))}
+          </div>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+        <div className="control-group">
+          <span className="control-label">
+            Particles<span className="control-value">{count}</span>
+          </span>
+          <input
+            className="slider"
+            type="range"
+            min="200"
+            max="3000"
+            step="100"
+            value={count}
+            onChange={(event) => setCount(Number(event.target.value))}
+          />
+        </div>
+
+        <div className="button-row">
+          <button type="button" className="action-button" onClick={handleClear}>
+            Clear
+          </button>
+          <button
+            type="button"
+            className="action-button"
+            onClick={togglePlayback}
+          >
+            {paused ? 'Play' : 'Pause'}
+          </button>
+        </div>
+      </div>
     </>
   )
 }
